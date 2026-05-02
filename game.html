@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON AI | Number Guessing Game</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cyan: #22d3ee;
+            --purple: #a855f7;
+            --pink: #f472b6;
+            --dark: #020617;
+            --glass: rgba(15, 23, 42, 0.7);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--dark);
+            background-image: radial-gradient(circle at 50% 50%, #1e1b4b 0%, #020617 100%);
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* --- Main UI Container --- */
+        .game-container {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid var(--cyan);
+            box-shadow: 0 0 30px rgba(34, 211, 238, 0.2);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            transition: all 0.4s ease;
+        }
+
+        /* --- AI Avatar Section --- */
+        .ai-avatar-wrapper {
+            margin-bottom: 1.5rem;
+        }
+
+        #ai-avatar {
+            font-size: 4rem;
+            display: inline-block;
+            animation: pulse 2s infinite ease-in-out;
+            filter: drop-shadow(0 0 10px var(--purple));
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        /* --- Text Styling --- */
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            letter-spacing: 3px;
+            color: var(--cyan);
+            text-shadow: 0 0 10px var(--cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .system-status {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            color: var(--pink);
+            margin-bottom: 1.5rem;
+            min-height: 1.2rem;
+        }
+
+        /* --- Input & Buttons --- */
+        .input-group {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input[type="number"] {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--purple);
+            border-radius: 10px;
+            padding: 15px;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            text-align: center;
+            outline: none;
+            transition: 0.3s;
+            -moz-appearance: textfield;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 15px var(--cyan);
+        }
+
+        button {
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 10px;
+            border: none;
+            text-transform: uppercase;
+            transition: 0.3s;
+            letter-spacing: 1px;
+        }
+
+        .btn-execute {
+            background: var(--cyan);
+            color: var(--dark);
+            box-shadow: 0 0 15px var(--cyan);
+        }
+
+        .btn-execute:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px var(--cyan);
+        }
+
+        .btn-reboot {
+            background: transparent;
+            border: 1px solid var(--pink);
+            color: var(--pink);
+            margin-top: 10px;
+            display: none;
+        }
+
+        .btn-reboot:hover {
+            background: var(--pink);
+            color: #fff;
+            box-shadow: 0 0 20px var(--pink);
+        }
+
+        /* --- Stats Row --- */
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item span {
+            display: block;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--purple);
+            font-size: 1.2rem;
+        }
+
+        /* --- Canvas for Win Celebration --- */
+        #canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* --- Win Overlay --- */
+        #win-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 101;
+            text-align: center;
+            display: none;
+            pointer-events: none;
+        }
+
+        .win-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            color: #fff;
+            text-shadow: 0 0 20px var(--pink), 0 0 40px var(--cyan);
+            animation: winPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes winPop {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="win-overlay">
+        <h2 class="win-text">CONGRATULATIONS 🎉</h2>
+    </div>
+
+    <div class="game-container">
+        <div class="ai-avatar-wrapper">
+            <div id="ai-avatar">🤖</div>
+        </div>
+
+        <h1>NEON AI SYSTEM</h1>
+        <div class="system-status" id="ai-message">INITIALIZING NEURAL LINK...</div>
+
+        <div class="input-group">
+            <input type="number" id="guess-input" placeholder="00-99" min="1" max="100" autofocus>
+            <button class="btn-execute" onclick="checkGuess()">Execute Guess</button>
+            <button class="btn-reboot" id="reboot-btn" onclick="initGame()">Reboot System</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <span>Attempts</span>
+                <div class="stat-value" id="attempt-count">0</div>
+            </div>
+            <div class="stat-item">
+                <span>Rank</span>
+                <div class="stat-value" id="rank-badge">--</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let targetNumber;
+        let attempts;
+        let isGameOver;
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        // Elements
+        const input = document.getElementById('guess-input');
+        const aiMsg = document.getElementById('ai-message');
+        const aiAvatar = document.getElementById('ai-avatar');
+        const attemptDisplay = document.getElementById('attempt-count');
+        const rankBadge = document.getElementById('rank-badge');
+        const rebootBtn = document.getElementById('reboot-btn');
+        const winOverlay = document.getElementById('win-overlay');
+
+        // Initialization
+        function initGame() {
+            targetNumber = Math.floor(Math.random() * 100) + 1;
+            attempts = 0;
+            isGameOver = false;
+            
+            // UI Reset
+            input.disabled = false;
+            input.value = '';
+            input.focus();
+            aiMsg.innerText = "LINK ESTABLISHED. GUESS THE SEED.";
+            aiAvatar.innerText = "🤖";
+            attemptDisplay.innerText = "0";
+            rankBadge.innerText = "--";
+            rebootBtn.style.display = 'none';
+            winOverlay.style.display = 'none';
+            particles = [];
+            
+            console.log("System Ready. Target: " + targetNumber); // Dev hint
+        }
+
+        // Logic
+        function checkGuess() {
+            if (isGameOver) return;
+
+            const userGuess = parseInt(input.value);
+
+            if (isNaN(userGuess) || userGuess < 1 || userGuess > 100) {
+                updateAI("INVALID PROTOCOL. RANGE: 1-100.", "🛰️");
+                return;
+            }
+
+            attempts++;
+            attemptDisplay.innerText = attempts;
+            updateRank();
+
+            if (userGuess === targetNumber) {
+                handleWin();
+            } else if (userGuess > targetNumber) {
+                updateAI("OVERFLOW. TRY LOWER.", "🛰️");
+                input.value = '';
+                input.focus();
+            } else {
+                updateAI("UNDERFLOW. INCREASE VALUE.", "🛰️");
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function updateAI(msg, emoji) {
+            aiMsg.innerText = msg;
+            aiAvatar.innerText = emoji;
+            // Return to normal after brief "thinking"
+            setTimeout(() => {
+                if(!isGameOver) aiAvatar.innerText = "🤖";
+            }, 800);
+        }
+
+        function updateRank() {
+            if (attempts <= 3) rankBadge.innerText = "PERFECT";
+            else if (attempts <= 6) rankBadge.innerText = "GREAT";
+            else if (attempts <= 10) rankBadge.innerText = "OKAY";
+            else rankBadge.innerText = "NEED PRACTICE";
+        }
+
+        function handleWin() {
+            isGameOver = true;
+            input.disabled = true;
+            aiMsg.innerText = "ACCESS GRANTED. SYSTEM UNLOCKED.";
+            aiAvatar.innerText = "✨";
+            rebootBtn.style.display = 'block';
+            winOverlay.style.display = 'block';
+            
+            createFirework();
+            
+            // Clear win overlay after 3 seconds
+            setTimeout(() => {
+                winOverlay.style.display = 'none';
+            }, 3500);
+        }
+
+        // --- Celebration Effect (Canvas) ---
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        function createFirework() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const colors = ['#22d3ee', '#a855f7', '#f472b6', '#ffffff'];
+            
+            for (let i = 0; i < 150; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 15,
+                    vy: (Math.random() - 0.5) * 15,
+                    size: Math.random() * 4 + 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: 1
+                });
+            }
+            animate();
+        }
+
+        function animate() {
+            if (!isGameOver && particles.length === 0) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.1; // Gravity
+                p.alpha -= 0.01;
+                
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+            
+            if (particles.length > 0) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // Event Listeners
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkGuess();
+        });
+
+        // Start
+        initGame();
+    </script>
+</body>
+</html>
